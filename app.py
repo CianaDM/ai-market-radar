@@ -63,16 +63,13 @@ if ticker:
     try:
         range_days = st.slider("Select date range (days):", min_value=5, max_value=90, value=30, step=5)
         today = datetime.date.today()
-        past = today - datetime.timedelta(days=30)
+        past = today - datetime.timedelta(days=range_days)
         data = yf.download(ticker, start=past, end=today)
-        # Flatten MultiIndex if needed
+
         if isinstance(data.columns, pd.MultiIndex):
             data.columns = [col[0] for col in data.columns]
-
-        # Standardize column capitalization
         data.columns = [col.capitalize() for col in data.columns]
 
-        # Continue if all required columns are present
         required_cols = {"Open", "High", "Low", "Close", "Volume"}
         if not required_cols.issubset(set(data.columns)):
             st.error(f"Missing required price columns: {required_cols - set(data.columns)}")
@@ -91,9 +88,6 @@ if ticker:
         st.metric("Volume Today", f"{volume_today:,}")
         st.metric("20D Avg Volume", f"{avg_volume:,}")
 
-
-        # === Apply Indicators ===
-        # === Native RSI and MA20 (no external deps) ===
         delta = data["Close"].diff()
         gain = (delta.where(delta > 0, 0)).rolling(14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
@@ -104,8 +98,6 @@ if ticker:
         st.subheader(f"Candlestick Chart with RSI & Volume ({range_days} Days)")
 
         fig = go.Figure()
-
-        # --- Candlestick ---
         fig.add_trace(go.Candlestick(
             x=data.index,
             open=data["Open"],
@@ -118,7 +110,6 @@ if ticker:
             hoverinfo="x+y"
         ))
 
-        # --- MA20 ---
         fig.add_trace(go.Scatter(
             x=data.index,
             y=data["MA20"],
@@ -128,7 +119,6 @@ if ticker:
             connectgaps=True
         ))
 
-        # --- Volume ---
         fig.add_trace(go.Bar(
             x=data.index,
             y=data["Volume"],
@@ -138,7 +128,6 @@ if ticker:
             opacity=0.3
         ))
 
-        # --- RSI ---
         fig.add_trace(go.Scatter(
             x=data.index,
             y=data["RSI"],
@@ -149,23 +138,22 @@ if ticker:
             connectgaps=True
         ))
 
-        # --- Layout ---
         fig.update_layout(
             height=720,
             template="plotly_white",
             xaxis=dict(domain=[0, 1], title="Date"),
             yaxis=dict(title="Price", domain=[0.3, 1], position=0.05),
-            yaxis2=dict(title="Volume", overlaying="y", side="left", position=1, anchor="x", showgrid=False),
-            yaxis3=dict(title="RSI", domain=[0, 0.2], anchor="x", showgrid=True),
+            yaxis2=dict(title="Volume", domain=[0.2, 0.3], anchor="x", showgrid=False),
+            yaxis3=dict(title="RSI", domain=[0, 0.18], anchor="x", showgrid=True),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
             margin=dict(t=40, b=20)
         )
 
         st.plotly_chart(fig, use_container_width=True)
 
-
     except Exception as e:
         st.error(f"Error fetching data for {ticker}: {e}")
+
 
 
 st.subheader("🧠 Sentiment Analysis")
