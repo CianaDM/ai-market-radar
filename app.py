@@ -11,6 +11,7 @@ import plotly.graph_objects as go
 import pandas as pd
 import time
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 
 st.set_page_config(page_title="AI Market Radar", layout="centered")
@@ -61,8 +62,12 @@ ticker = st.text_input("Enter a stock ticker (e.g., AAPL, TSLA, NVDA):", value="
 
 if ticker:
     try:
-        range_days = st.slider("Select date range (days):", min_value=5, max_value=90, value=30, step=5)
+        # === Date Range Slider (moved below chart later) ===
+        # Will be rendered after chart section
+
+        # === Fetch Data ===
         today = datetime.date.today()
+        range_days = 30  # default value, overridden by slider after chart
         past = today - datetime.timedelta(days=range_days)
         data = yf.download(ticker, start=past, end=today)
 
@@ -88,6 +93,7 @@ if ticker:
         st.metric("Volume Today", f"{volume_today:,}")
         st.metric("20D Avg Volume", f"{avg_volume:,}")
 
+        # === RSI and MA20 ===
         delta = data["Close"].diff()
         gain = (delta.where(delta > 0, 0)).rolling(14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
@@ -95,9 +101,17 @@ if ticker:
         data["RSI"] = 100 - (100 / (1 + rs))
         data["MA20"] = data["Close"].rolling(window=20).mean()
 
+        from plotly.subplots import make_subplots
         st.subheader(f"Candlestick Chart with RSI & Volume ({range_days} Days)")
 
-        fig = go.Figure()
+        fig = make_subplots(
+            rows=3, cols=1,
+            shared_xaxes=True,
+            vertical_spacing=0.02,
+            row_heights=[0.55, 0.25, 0.2],
+            subplot_titles=("Price with 20D MA", "Volume", "RSI (14)")
+        )
+
         fig.add_trace(go.Candlestick(
             x=data.index,
             open=data["Open"],
@@ -105,51 +119,48 @@ if ticker:
             low=data["Low"],
             close=data["Close"],
             name="Price",
-            increasing_line_color='green',
-            decreasing_line_color='red',
-            hoverinfo="x+y"
-        ))
+            increasing_line_color="green",
+            decreasing_line_color="red"
+        ), row=1, col=1)
 
         fig.add_trace(go.Scatter(
             x=data.index,
             y=data["MA20"],
             name="20D MA",
             mode="lines",
-            line=dict(color='blue', width=1),
-            connectgaps=True
-        ))
+            line=dict(color='blue', width=1)
+        ), row=1, col=1)
 
         fig.add_trace(go.Bar(
             x=data.index,
             y=data["Volume"],
             name="Volume",
             marker_color="lightgrey",
-            yaxis="y2",
-            opacity=0.3
-        ))
+            opacity=0.5
+        ), row=2, col=1)
 
         fig.add_trace(go.Scatter(
             x=data.index,
             y=data["RSI"],
-            name="RSI (14)",
-            mode="lines",
-            line=dict(color="orange", width=1),
-            yaxis="y3",
-            connectgaps=True
-        ))
+            name="RSI",
+            line=dict(color="orange", width=1)
+        ), row=3, col=1)
 
         fig.update_layout(
             height=720,
             template="plotly_white",
-            xaxis=dict(domain=[0, 1], title="Date"),
-            yaxis=dict(title="Price", domain=[0.3, 1], position=0.05),
-            yaxis2=dict(title="Volume", domain=[0.2, 0.3], anchor="x", showgrid=False),
-            yaxis3=dict(title="RSI", domain=[0, 0.18], anchor="x", showgrid=True),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-            margin=dict(t=40, b=20)
+            showlegend=True,
+            xaxis3=dict(title="Date"),
+            yaxis1=dict(title="Price"),
+            yaxis2=dict(title="Volume"),
+            yaxis3=dict(title="RSI"),
+            margin=dict(t=40, b=40)
         )
 
         st.plotly_chart(fig, use_container_width=True)
+
+        # === Render Slider BELOW the chart ===
+        range_days = st.slider("Select date range (days):", min_value=5, max_value=90, value=30, step=5)
 
     except Exception as e:
         st.error(f"Error fetching data for {ticker}: {e}")
