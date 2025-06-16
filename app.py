@@ -261,3 +261,45 @@ def get_metrics_for_ticker(ticker, name=None):
     except Exception as e:
         st.error(f"❌ Error with {ticker}: {e}")
         return None
+    
+    # Display Screener Tabs
+tab1, tab2 = st.tabs(["Senior Miners", "Junior Miners"])
+
+def display_screener(data):
+    if data:
+        df = pd.DataFrame([{k: v for k, v in d.items() if k != "Headlines"} for d in data])
+        df = df.sort_values(by="Sentiment", ascending=False)
+        st.dataframe(df, use_container_width=True)
+
+        for d in data:
+            with st.expander(f"🗞️ Headlines for {d['Company']} ({d['Ticker']})"):
+                if not d["Headlines"]:
+                    st.write("No headlines available.")
+                for row in d["Headlines"]:
+                    st.markdown(f"""
+                    > *{row['headline']}*  
+                    🟢 Positive: `{row['positive']}`  
+                    ⚪ Neutral: `{row['neutral']}`  
+                    🔴 Negative: `{row['negative']}`
+                    """)
+    else:
+        st.info("No data available.")
+
+with tab1:
+    st.subheader("🟡 Senior Mining Companies")
+    senior_data = []
+    for ticker, name in senior_miners.items():
+        row = get_metrics_for_ticker(ticker, name)
+        if row:
+            senior_data.append(row)
+    display_screener(senior_data)
+
+with tab2:
+    st.subheader("⚒️ Junior Mining Companies")
+    junior_data = []
+    for ticker, name in junior_miners.items():
+        row = get_metrics_for_ticker(ticker, name)
+        if row:
+            junior_data.append(row)
+    display_screener(junior_data)
+
