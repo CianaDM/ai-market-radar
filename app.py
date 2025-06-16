@@ -231,7 +231,7 @@ def get_metrics_for_ticker(ticker, name=None):
         today_vol = data["Volume"].iloc[-1]
         vol_spike = today_vol / avg_vol if avg_vol and avg_vol > 0 else 1
 
-        news_api_url = f"https://newsapi.org/v2/everything?q={ticker}&language=en&sortBy=publishedAt&pageSize=5&apiKey=YOUR_NEWSAPI_KEY"
+        news_api_url = f"https://newsapi.org/v2/everything?q={ticker}&language=en&sortBy=publishedAt&pageSize=5&apiKey=11c0eca5f0284ac79d05f6a14749dc65"
         news_data = requests.get(news_api_url).json()
         articles = news_data.get("articles", [])
         headlines = [a["title"] for a in articles if "title" in a]
