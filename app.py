@@ -2,7 +2,6 @@
 
 import streamlit as st
 import yfinance as yf
-from textblob import TextBlob
 import matplotlib.pyplot as plt
 import datetime
 import torch
