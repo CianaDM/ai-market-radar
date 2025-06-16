@@ -67,12 +67,11 @@ if ticker:
 
     try:
         # Use slider inside try block to reactively update chart
-        :", min_value=5, max_value=180, value=30, step=5)
+        :
 
         today = datetime.date.today()
         past = today - datetime.timedelta(days=range_days)
         data = yf.download(ticker, start=past, end=today)
-
         if isinstance(data.columns, pd.MultiIndex):
             data.columns = [col[0] for col in data.columns]
         data.columns = [col.capitalize() for col in data.columns]
@@ -157,11 +156,15 @@ if ticker:
 
         st.plotly_chart(fig, use_container_width=True)
 
-        # Move slider to render AFTER chart
+        # Render the slider *after* the chart
         range_days = slider_slot.slider("Select date range (days):", min_value=5, max_value=180, value=range_days, step=5)
+
+        # Move slider to render AFTER chart
+        range_days = slider_slot.slider("Select date range (days):", min_value=5, max_value=180, value=range_days, step=5):", min_value=5, max_value=180, value=range_days, step=5)
 
     except Exception as e:
         st.error(f"Error fetching data for {ticker}: {e}")
+
 
 
 
