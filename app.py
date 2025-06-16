@@ -62,10 +62,9 @@ ticker = st.text_input("Enter a stock ticker (e.g., AAPL, TSLA, NVDA):", value="
 
 if ticker:
     try:
-        # === Slider goes first so it drives data download ===
+        # === Slider first so it drives data fetching ===
         range_days = st.slider("Select date range (days):", min_value=5, max_value=90, value=30, step=5)
 
-        # === Get data based on slider ===
         today = datetime.date.today()
         past = today - datetime.timedelta(days=range_days)
         data = yf.download(ticker, start=past, end=today)
@@ -143,17 +142,25 @@ if ticker:
             x=data.index,
             y=data["RSI"],
             name="RSI",
+            mode="lines",
             line=dict(color="orange", width=1)
         ), row=3, col=1)
 
         fig.update_layout(
-            height=800,
+            height=850,
             template="plotly_white",
             showlegend=True,
-            margin=dict(t=40, b=40)
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=-0.3,
+                xanchor="center",
+                x=0.5
+            ),
+            margin=dict(t=40, b=80)
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=False)
 
     except Exception as e:
         st.error(f"Error fetching data for {ticker}: {e}")
