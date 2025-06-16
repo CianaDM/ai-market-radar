@@ -14,7 +14,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 
-st.set_page_config(page_title="AI Market Radar", layout="centered")
+st.set_page_config(page_title="AI Market Radar", layout="wide")
 
 # ===============================
 # Load FinBERT Once
