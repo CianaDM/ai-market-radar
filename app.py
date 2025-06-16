@@ -11,7 +11,6 @@ import plotly.graph_objects as go
 import pandas as pd
 import time
 import plotly.graph_objects as go
-import pandas_ta as ta
 
 
 st.set_page_config(page_title="AI Market Radar", layout="centered")
@@ -79,14 +78,19 @@ if ticker:
 
 
         # === Apply Indicators ===
-        data["RSI"] = ta.rsi(data["Close"], length=14)
+        # === Native RSI and MA20 (no external deps) ===
+        delta = data["Close"].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+        rs = gain / loss
+        data["RSI"] = 100 - (100 / (1 + rs))
         data["MA20"] = data["Close"].rolling(window=20).mean()
 
-        st.subheader(f"Candlestick Chart with RSI & Volume ({range_days} Days)")
+        st.subheader(f"Candlestick Chart with RSI & Volume (30 Days)")
 
         fig = go.Figure()
 
-        # --- Candlestick Trace ---
+        # --- Candlestick ---
         fig.add_trace(go.Candlestick(
             x=data.index,
             open=data["Open"],
@@ -105,7 +109,7 @@ if ticker:
                 "<extra></extra>"
         ))
 
-        # --- MA20 Overlay ---
+        # --- MA20 ---
         fig.add_trace(go.Scatter(
             x=data.index,
             y=data["MA20"],
@@ -115,7 +119,7 @@ if ticker:
             hovertemplate="<b>Date</b>: %{x|%Y-%m-%d}<br><b>20D MA</b>: $%{y:.2f}<extra></extra>"
         ))
 
-        # --- Volume Bars ---
+        # --- Volume ---
         fig.add_trace(go.Bar(
             x=data.index,
             y=data["Volume"],
@@ -126,7 +130,7 @@ if ticker:
             hovertemplate="<b>Date</b>: %{x|%Y-%m-%d}<br><b>Volume</b>: %{y:.0f}<extra></extra>"
         ))
 
-        # --- RSI Line ---
+        # --- RSI ---
         fig.add_trace(go.Scatter(
             x=data.index,
             y=data["RSI"],
@@ -137,7 +141,7 @@ if ticker:
             hovertemplate="<b>Date</b>: %{x|%Y-%m-%d}<br><b>RSI</b>: %{y:.2f}<extra></extra>"
         ))
 
-        # --- Layout Config ---
+        # --- Layout ---
         fig.update_layout(
             height=700,
             template="plotly_white",
@@ -150,6 +154,7 @@ if ticker:
         )
 
         st.plotly_chart(fig, use_container_width=True)
+
     except Exception as e:
         st.error(f"Error fetching data for {ticker}: {e}")
 
