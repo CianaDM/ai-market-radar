@@ -191,9 +191,10 @@ if ticker:
     except Exception as e:
         st.error(f"Error fetching data for {ticker}: {e}")
 
-    # ================================
-# ⛏️ Mining Sector Screener Block
-# ================================
+
+
+# 📊 Multi-Ticker Screener Add-On for Mining Stocks (Senior & Junior)
+# Includes debug and fallback handling for junior miners
 
 st.header("⛏️ Mining Sector Screener")
 
@@ -216,26 +217,33 @@ junior_miners = {
 
 def get_metrics_for_ticker(ticker, name=None):
     try:
+        st.write(f"🔎 Processing: {ticker} ({name})")
         data = yf.download(ticker, period="1mo", interval="1d", auto_adjust=False)
         if isinstance(data.columns, pd.MultiIndex):
             data.columns = [col[0] for col in data.columns]
 
         if len(data) < 2:
+            st.warning(f"⚠️ Not enough data for {ticker}")
             return None
 
         price_change = ((data["Close"].iloc[-1] - data["Close"].iloc[0]) / data["Close"].iloc[0]) * 100
         avg_vol = data["Volume"].rolling(window=20).mean().iloc[-1]
         today_vol = data["Volume"].iloc[-1]
-        vol_spike = today_vol / avg_vol if avg_vol else 1
+        vol_spike = today_vol / avg_vol if avg_vol and avg_vol > 0 else 1
 
-        news_api_url = f"https://newsapi.org/v2/everything?q={ticker}&language=en&sortBy=publishedAt&pageSize=5&apiKey=11c0eca5f0284ac79d05f6a14749dc65"
+        news_api_url = f"https://newsapi.org/v2/everything?q={ticker}&language=en&sortBy=publishedAt&pageSize=5&apiKey=YOUR_NEWSAPI_KEY"
         news_data = requests.get(news_api_url).json()
         articles = news_data.get("articles", [])
         headlines = [a["title"] for a in articles if "title" in a]
-        if not headlines:
-            return None
+        st.write("📰 Headlines:", headlines)
 
-        results, polarity = get_finbert_sentiment(headlines)
+        if not headlines:
+            st.warning(f"⚠️ No headlines found for {ticker}")
+            polarity = 0.0
+            results = []
+        else:
+            results, polarity = get_finbert_sentiment(headlines)
+
         signal = polarity > 0.3 and vol_spike > 1.5
 
         return {
@@ -247,7 +255,8 @@ def get_metrics_for_ticker(ticker, name=None):
             "Signal": "✅" if signal else "",
             "Headlines": results
         }
-    except:
+    except Exception as e:
+        st.error(f"❌ Error with {ticker}: {e}")
         return None
 
 # Display Screener Tabs
@@ -261,6 +270,8 @@ def display_screener(data):
 
         for d in data:
             with st.expander(f"🗞️ Headlines for {d['Company']} ({d['Ticker']})"):
+                if not d["Headlines"]:
+                    st.write("No headlines available.")
                 for row in d["Headlines"]:
                     st.markdown(f"""
                     > *{row['headline']}*  
@@ -288,4 +299,3 @@ with tab2:
         if row:
             junior_data.append(row)
     display_screener(junior_data)
-
