@@ -26,10 +26,26 @@ def get_finbert_sentiment(headlines):
     inputs = tokenizer(headlines, padding=True, truncation=True, return_tensors="pt")
     with torch.no_grad():
         outputs = model(**inputs)
-    scores = torch.nn.functional.softmax(outputs.logits, dim=1)
-    sentiment_scores = scores.mean(dim=0).tolist()
+    scores = torch.nn.functional.softmax(outputs.logits, dim=1).tolist()
     labels = ["negative", "neutral", "positive"]
-    return dict(zip(labels, sentiment_scores))
+
+    results = []
+    for i, headline in enumerate(headlines):
+        label_scores = dict(zip(labels, scores[i]))
+        results.append({
+            "headline": headline,
+            "negative": round(label_scores["negative"], 2),
+            "neutral": round(label_scores["neutral"], 2),
+            "positive": round(label_scores["positive"], 2),
+        })
+
+    # Aggregate sentiment score (average positive - negative)
+    avg_pos = sum(r["positive"] for r in results) / len(results)
+    avg_neg = sum(r["negative"] for r in results) / len(results)
+    polarity = avg_pos - avg_neg
+
+    return results, polarity
+
 
 # --- Ticker Input ---
 ticker = st.text_input("Enter a stock ticker (e.g., AAPL, TSLA, NVDA):", value="AAPL").upper()
@@ -111,8 +127,8 @@ if ticker:
             sentiment = "Neutral 🤔"
             polarity = 0.0
         else:
-            sentiment_result = get_finbert_sentiment(headlines)
-            polarity = sentiment_result["positive"] - sentiment_result["negative"]
+            finbert_results, polarity = get_finbert_sentiment(headlines)
+            finbert_results = sorted(finbert_results, key=lambda x: x["positive"], reverse=True)
 
             if polarity > 0.2:
                 sentiment = "Bullish 📈"
@@ -122,6 +138,36 @@ if ticker:
                 sentiment = "Neutral 🤔"
 
         st.metric("Sentiment", sentiment, f"{polarity:.2f}")
+
+        with st.expander("ℹ️ How this sentiment score is calculated"):
+            st.markdown(f"""
+            We analyze the most recent headlines for **{ticker}** using [**FinBERT**](https://huggingface.co/ProsusAI/finbert), a language model trained on financial documents.
+
+            **Process:**
+            1. Fetch the last 5 headlines mentioning `{ticker}`
+            2. Each headline is scored as:
+                - 🟢 Positive
+                - ⚪ Neutral
+                - 🔴 Negative
+            3. We compute:
+            ```python
+            Sentiment Score = Average(Positive) - Average(Negative)
+            ```
+
+            - **Bullish** if score > +0.2
+            - **Bearish** if score < –0.2
+            - **Neutral** otherwise
+            """)
+
+            st.markdown("**🔍 Raw FinBERT Scores by Headline:**")
+            for row in finbert_results:
+                st.markdown(f"""
+                > *{row['headline']}*  
+                🟢 Positive: `{row['positive']}`  
+                ⚪ Neutral: `{row['neutral']}`  
+                🔴 Negative: `{row['negative']}`  
+                """)
+
 
         # --- AI Insight ---
         st.subheader("🔍 AI Insight")
