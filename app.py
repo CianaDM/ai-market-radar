@@ -96,7 +96,7 @@ if ticker:
         NEWS_API_KEY = "YOUR_NEWSAPI_KEY"  # ← Replace with your real key
 
         news_api_url = (
-            f"https://newsapi.org/v2/everything?q={ticker}&language=en&sortBy=publishedAt&pageSize=5&apiKey={NEWS_API_KEY}"
+            f"https://newsapi.org/v2/everything?q={ticker}&language=en&sortBy=publishedAt&pageSize=5&apiKey=11c0eca5f0284ac79d05f6a14749dc65"
         )
 
         try:
