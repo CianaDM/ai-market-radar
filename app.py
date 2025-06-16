@@ -153,11 +153,11 @@ if ticker:
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
-                y=-0.3,
+                y=-0.15,
                 xanchor="center",
                 x=0.5
             ),
-            margin=dict(t=40, b=80)
+            margin=dict(t=40, b=40)
         )
 
         st.plotly_chart(fig, use_container_width=False)
