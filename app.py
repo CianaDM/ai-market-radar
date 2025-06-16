@@ -190,3 +190,102 @@ if ticker:
         """)
     except Exception as e:
         st.error(f"Error fetching data for {ticker}: {e}")
+
+    # ================================
+# ⛏️ Mining Sector Screener Block
+# ================================
+
+st.header("⛏️ Mining Sector Screener")
+
+# Senior and Junior Miner Ticker Sets
+senior_miners = {
+    "AEM": "Agnico Eagle Mines",
+    "NEM": "Newmont Corporation",
+    "GOLD": "Barrick Gold",
+    "FNV": "Franco-Nevada",
+    "WPM": "Wheaton Precious Metals"
+}
+
+junior_miners = {
+    "ROS.V": "Roscan Gold",
+    "MOZ.TO": "Marathon Gold",
+    "OSK.TO": "Osisko Mining",
+    "AR.TO": "Argonaut Gold",
+    "NXS.V": "Nexus Gold"
+}
+
+def get_metrics_for_ticker(ticker, name=None):
+    try:
+        data = yf.download(ticker, period="1mo", interval="1d", auto_adjust=False)
+        if isinstance(data.columns, pd.MultiIndex):
+            data.columns = [col[0] for col in data.columns]
+
+        if len(data) < 2:
+            return None
+
+        price_change = ((data["Close"].iloc[-1] - data["Close"].iloc[0]) / data["Close"].iloc[0]) * 100
+        avg_vol = data["Volume"].rolling(window=20).mean().iloc[-1]
+        today_vol = data["Volume"].iloc[-1]
+        vol_spike = today_vol / avg_vol if avg_vol else 1
+
+        news_api_url = f"https://newsapi.org/v2/everything?q={ticker}&language=en&sortBy=publishedAt&pageSize=5&apiKey=11c0eca5f0284ac79d05f6a14749dc65"
+        news_data = requests.get(news_api_url).json()
+        articles = news_data.get("articles", [])
+        headlines = [a["title"] for a in articles if "title" in a]
+        if not headlines:
+            return None
+
+        results, polarity = get_finbert_sentiment(headlines)
+        signal = polarity > 0.3 and vol_spike > 1.5
+
+        return {
+            "Ticker": ticker,
+            "Company": name or ticker,
+            "Sentiment": round(polarity, 2),
+            "Price Change (%)": round(price_change, 2),
+            "Volume Spike (x)": round(vol_spike, 2),
+            "Signal": "✅" if signal else "",
+            "Headlines": results
+        }
+    except:
+        return None
+
+# Display Screener Tabs
+tab1, tab2 = st.tabs(["Senior Miners", "Junior Miners"])
+
+def display_screener(data):
+    if data:
+        df = pd.DataFrame([{k: v for k, v in d.items() if k != "Headlines"} for d in data])
+        df = df.sort_values(by="Sentiment", ascending=False)
+        st.dataframe(df, use_container_width=True)
+
+        for d in data:
+            with st.expander(f"🗞️ Headlines for {d['Company']} ({d['Ticker']})"):
+                for row in d["Headlines"]:
+                    st.markdown(f"""
+                    > *{row['headline']}*  
+                    🟢 Positive: `{row['positive']}`  
+                    ⚪ Neutral: `{row['neutral']}`  
+                    🔴 Negative: `{row['negative']}`
+                    """)
+    else:
+        st.info("No data available.")
+
+with tab1:
+    st.subheader("🟡 Senior Mining Companies")
+    senior_data = []
+    for ticker, name in senior_miners.items():
+        row = get_metrics_for_ticker(ticker, name)
+        if row:
+            senior_data.append(row)
+    display_screener(senior_data)
+
+with tab2:
+    st.subheader("⚒️ Junior Mining Companies")
+    junior_data = []
+    for ticker, name in junior_miners.items():
+        row = get_metrics_for_ticker(ticker, name)
+        if row:
+            junior_data.append(row)
+    display_screener(junior_data)
+
