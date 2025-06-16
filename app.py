@@ -61,6 +61,7 @@ ticker = st.text_input("Enter a stock ticker (e.g., AAPL, TSLA, NVDA):", value="
 
 if ticker:
     try:
+        range_days = st.slider("Select date range (days):", min_value=5, max_value=90, value=30, step=5)
         today = datetime.date.today()
         past = today - datetime.timedelta(days=30)
         data = yf.download(ticker, start=past, end=today)
