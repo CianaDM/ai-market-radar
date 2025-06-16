@@ -61,9 +61,13 @@ st.caption("Get live price, volume, and AI-powered sentiment analysis.")
 ticker = st.text_input("Enter a stock ticker (e.g., AAPL, TSLA, NVDA):", value="AAPL").upper()
 
 if ticker:
+    # Slider placeholder for bottom positioning
+    range_days_placeholder = st.empty()
+    range_days = 30
+
     try:
-        # ✅ Move slider up front so it affects data pull
-        range_days = st.slider("Select date range (days):", min_value=5, max_value=90, value=30, step=5)
+        # Use slider inside try block to reactively update chart
+        range_days = range_days_placeholder.slider("Select date range (days):", min_value=5, max_value=180, value=30, step=5)
 
         today = datetime.date.today()
         past = today - datetime.timedelta(days=range_days)
@@ -104,8 +108,8 @@ if ticker:
         fig = make_subplots(
             rows=3, cols=1,
             shared_xaxes=True,
-            vertical_spacing=0.005,
-            row_heights=[0.7, 0.2, 0.1],
+            vertical_spacing=0.02,
+            row_heights=[0.65, 0.25, 0.1],
             subplot_titles=("Price with 20D MA", "Volume", "RSI (14)")
         )
 
@@ -145,10 +149,10 @@ if ticker:
         ), row=3, col=1)
 
         fig.update_layout(
-            height=900,
+            height=950,
             template="plotly_white",
             showlegend=True,
-            margin=dict(t=40, b=40)
+            margin=dict(t=40, b=80)
         )
 
         st.plotly_chart(fig, use_container_width=True)
