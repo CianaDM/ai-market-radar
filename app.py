@@ -62,12 +62,10 @@ ticker = st.text_input("Enter a stock ticker (e.g., AAPL, TSLA, NVDA):", value="
 
 if ticker:
     try:
-        # === Slider drives dynamic range ===
-        range_days = st.slider("Select date range (days):", min_value=5, max_value=90, value=30, step=5)
-
-        # === Get historical data ===
+        # Get default range first (will update below after chart)
+        default_range = 30
         today = datetime.date.today()
-        past = today - datetime.timedelta(days=range_days)
+        past = today - datetime.timedelta(days=default_range)
         data = yf.download(ticker, start=past, end=today)
 
         if isinstance(data.columns, pd.MultiIndex):
@@ -92,7 +90,7 @@ if ticker:
         st.metric("Volume Today", f"{volume_today:,}")
         st.metric("20D Avg Volume", f"{avg_volume:,}")
 
-        # === Indicators ===
+        # RSI and MA indicators
         delta = data["Close"].diff()
         gain = (delta.where(delta > 0, 0)).rolling(14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
@@ -100,12 +98,13 @@ if ticker:
         data["RSI"] = 100 - (100 / (1 + rs))
         data["MA20"] = data["Close"].rolling(window=20).mean()
 
-        from plotly.subplots import make_subplots
+        st.subheader(f"Candlestick Chart with RSI & Volume ({default_range} Days)")
+
         fig = make_subplots(
             rows=3, cols=1,
             shared_xaxes=True,
-            vertical_spacing=0.01,
-            row_heights=[0.7, 0.2, 0.1],
+            vertical_spacing=0.02,
+            row_heights=[0.6, 0.25, 0.15],
             subplot_titles=("Price with 20D MA", "Volume", "RSI (14)")
         )
 
@@ -145,7 +144,7 @@ if ticker:
         ), row=3, col=1)
 
         fig.update_layout(
-            height=750,
+            height=800,
             template="plotly_white",
             showlegend=True,
             margin=dict(t=40, b=40)
@@ -153,8 +152,13 @@ if ticker:
 
         st.plotly_chart(fig, use_container_width=True)
 
+        # ✅ Render slider BELOW chart
+        range_days = st.slider("Select date range (days):", min_value=5, max_value=90, value=default_range, step=5)
+        st.caption("⬆️ Adjust the date range to refresh chart data.")
+
     except Exception as e:
         st.error(f"Error fetching data for {ticker}: {e}")
+
 
 
 st.subheader("🧠 Sentiment Analysis")
