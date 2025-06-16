@@ -61,105 +61,41 @@ st.caption("Get live price, volume, and AI-powered sentiment analysis.")
 ticker = st.text_input("Enter a stock ticker (e.g., AAPL, TSLA, NVDA):", value="AAPL").upper()
 
 if ticker:
-    # Slider placeholder for bottom positioning
-    slider_slot = st.empty()
-    range_days = 30
-
     try:
-        # Use slider inside try block to reactively update chart
-
         today = datetime.date.today()
-        past = today - datetime.timedelta(days=range_days)
+        past = today - datetime.timedelta(days=30)
         data = yf.download(ticker, start=past, end=today)
         if isinstance(data.columns, pd.MultiIndex):
             data.columns = [col[0] for col in data.columns]
         data.columns = [col.capitalize() for col in data.columns]
 
-        required_cols = {"Open", "High", "Low", "Close", "Volume"}
+        required_cols = {"Open", "High", "Low", "Close"}
         if not required_cols.issubset(set(data.columns)):
             st.error(f"Missing required price columns: {required_cols - set(data.columns)}")
             st.stop()
 
         data = data.dropna(subset=list(required_cols))
 
-        stock = yf.Ticker(ticker)
-        hist = stock.history(period="1d")
-        current_price = hist["Close"].iloc[-1]
-        volume_today = hist["Volume"].iloc[-1]
-        avg_volume = stock.info.get("averageVolume", 1)
+        st.subheader("Candlestick Chart (30 Days)")
 
-        st.subheader(f"{ticker} – Market Snapshot")
-        st.metric("Current Price", f"${current_price:.2f}")
-        st.metric("Volume Today", f"{volume_today:,}")
-        st.metric("20D Avg Volume", f"{avg_volume:,}")
-
-        # === Indicators ===
-        delta = data["Close"].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
-        rs = gain / loss
-        data["RSI"] = 100 - (100 / (1 + rs))
-        data["MA20"] = data["Close"].rolling(window=20).mean()
-
-        st.subheader(f"Candlestick Chart with RSI & Volume ({range_days} Days)")
-
-        fig = make_subplots(
-            rows=3, cols=1,
-            shared_xaxes=True,
-            vertical_spacing=0.02,
-            row_heights=[0.65, 0.25, 0.1],
-            subplot_titles=("Price with 20D MA", "Volume", "RSI (14)")
-        )
-
-        fig.add_trace(go.Candlestick(
+        fig = go.Figure(data=[go.Candlestick(
             x=data.index,
             open=data["Open"],
             high=data["High"],
             low=data["Low"],
             close=data["Close"],
-            name="Price",
             increasing_line_color="green",
             decreasing_line_color="red"
-        ), row=1, col=1)
-
-        fig.add_trace(go.Scatter(
-            x=data.index,
-            y=data["MA20"],
-            name="20D MA",
-            mode="lines",
-            line=dict(color='blue', width=1)
-        ), row=1, col=1)
-
-        fig.add_trace(go.Bar(
-            x=data.index,
-            y=data["Volume"],
-            name="Volume",
-            marker_color="lightgrey",
-            opacity=0.5
-        ), row=2, col=1)
-
-        fig.add_trace(go.Scatter(
-            x=data.index,
-            y=data["RSI"],
-            name="RSI",
-            mode="lines",
-            line=dict(color="orange", width=1)
-        ), row=3, col=1)
+        )])
 
         fig.update_layout(
-            height=950,
+            height=700,
             template="plotly_white",
-            showlegend=True,
-            margin=dict(t=40, b=80)
+            showlegend=False,
+            margin=dict(t=40, b=40)
         )
 
         st.plotly_chart(fig, use_container_width=True)
-
-        # Render the slider *after* the chart
-        range_days = slider_slot.slider("Select date range (days):", min_value=5, max_value=180, value=range_days, step=5)
-
-        # Move slider to render AFTER chart
-        range_days = slider_slot.slider("Select date range (days):", min_value=5, max_value=180, value=range_days, step=5)
 
     except Exception as e:
         st.error(f"Error fetching data for {ticker}: {e}")
