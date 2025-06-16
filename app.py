@@ -100,14 +100,10 @@ if ticker:
             name="Price",
             increasing_line_color='green',
             decreasing_line_color='red',
-            hovertemplate=
-                "<b>Date</b>: %{x|%Y-%m-%d}<br>"
-                "<b>Open</b>: $%{open}<br>"
-                "<b>High</b>: $%{high}<br>"
-                "<b>Low</b>: $%{low}<br>"
-                "<b>Close</b>: $%{close}<br>"
-                "<extra></extra>"
+            hovertext=data.index.strftime("%Y-%m-%d"),  # optional
+            hoverinfo="x+y"
         ))
+
 
         # --- MA20 ---
         fig.add_trace(go.Scatter(
