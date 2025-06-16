@@ -64,7 +64,20 @@ if ticker:
         today = datetime.date.today()
         past = today - datetime.timedelta(days=30)
         data = yf.download(ticker, start=past, end=today)
-        data = data.dropna(subset=["Open", "High", "Low", "Close", "Volume"])
+        # Flatten MultiIndex if needed
+        if isinstance(data.columns, pd.MultiIndex):
+            data.columns = [col[0] for col in data.columns]
+
+        # Standardize column capitalization
+        data.columns = [col.capitalize() for col in data.columns]
+
+        # Continue if all required columns are present
+        required_cols = {"Open", "High", "Low", "Close", "Volume"}
+        if not required_cols.issubset(set(data.columns)):
+            st.error(f"Missing required price columns: {required_cols - set(data.columns)}")
+            st.stop()
+
+        data = data.dropna(subset=list(required_cols))
 
         stock = yf.Ticker(ticker)
         hist = stock.history(period="1d")
@@ -220,23 +233,23 @@ else:
 # ===============================
 # Sector Screener – Mining Stocks
 # ===============================
-    st.header("⛏️ Mining Sector Screener")
+st.header("⛏️ Mining Sector Screener")
 
-    senior_miners = {
-        "AEM": "Agnico Eagle Mines",
-        "NEM": "Newmont Corporation",
-        "GOLD": "Barrick Gold",
-        "FNV": "Franco-Nevada",
-        "WPM": "Wheaton Precious Metals"
-    }
+senior_miners = {
+    "AEM": "Agnico Eagle Mines",
+    "NEM": "Newmont Corporation",
+    "GOLD": "Barrick Gold",
+    "FNV": "Franco-Nevada",
+    "WPM": "Wheaton Precious Metals"
+}
 
-    junior_miners = {
-        "ROS.V": "Roscan Gold",
-        "MOZ.TO": "Marathon Gold",
-        "OSK.TO": "Osisko Mining",
-        "AR.TO": "Argonaut Gold",
-        "NXS.V": "Nexus Gold"
-    }
+junior_miners = {
+    "ROS.V": "Roscan Gold",
+    "MOZ.TO": "Marathon Gold",
+    "OSK.TO": "Osisko Mining",
+    "AR.TO": "Argonaut Gold",
+    "NXS.V": "Nexus Gold"
+}
 
 def get_metrics_for_ticker(ticker, name=None):
     try:
