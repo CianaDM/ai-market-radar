@@ -2,14 +2,17 @@
 
 import streamlit as st
 import yfinance as yf
-import matplotlib.pyplot as plt
 import datetime
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch.nn.functional as F
 import requests
+import plotly.graph_objects as go
 import pandas as pd
 import time
+import plotly.graph_objects as go
+import pandas_ta as ta
+
 
 st.set_page_config(page_title="AI Market Radar", layout="centered")
 
@@ -74,98 +77,166 @@ if ticker:
         st.metric("Volume Today", f"{volume_today:,}")
         st.metric("20D Avg Volume", f"{avg_volume:,}")
 
-        st.subheader("Price Chart (Last 30 Days)")
-        fig, ax = plt.subplots()
-        ax.plot(data.index, data["Close"], label="Close Price")
-        ax.set_xlabel("Date")
-        ax.set_ylabel("Price")
-        ax.grid(True)
-        st.pyplot(fig)
 
-        st.subheader("🧠 Sentiment Analysis")
+        # === Apply Indicators ===
+        data["RSI"] = ta.rsi(data["Close"], length=14)
+        data["MA20"] = data["Close"].rolling(window=20).mean()
 
-        # === Fetch Headlines ===
-        news_api_url = f"https://newsapi.org/v2/everything?q=\"{ticker}\"&language=en&sortBy=publishedAt&pageSize=5&apiKey=11c0eca5f0284ac79d05f6a14749dc65"
-        news_data = requests.get(news_api_url).json()
-        articles = news_data.get("articles", [])
-        headlines = [a["title"] for a in articles if "title" in a]
+        st.subheader(f"Candlestick Chart with RSI & Volume ({range_days} Days)")
 
-        if not headlines:
-            st.warning("No recent headlines found for sentiment analysis.")
-        else:
-            finbert_results, polarity = get_finbert_sentiment(headlines)
-            finbert_results = sorted(finbert_results, key=lambda x: x["positive"], reverse=True)
+        fig = go.Figure()
 
-            if polarity > 0.2:
-                sentiment = "Bullish 📈"
-            elif polarity < -0.2:
-                sentiment = "Bearish 📉"
-            else:
-                sentiment = "Neutral 🤔"
+        # --- Candlestick Trace ---
+        fig.add_trace(go.Candlestick(
+            x=data.index,
+            open=data["Open"],
+            high=data["High"],
+            low=data["Low"],
+            close=data["Close"],
+            name="Price",
+            increasing_line_color='green',
+            decreasing_line_color='red',
+            hovertemplate=
+                "<b>Date</b>: %{x|%Y-%m-%d}<br>"
+                "<b>Open</b>: $%{open}<br>"
+                "<b>High</b>: $%{high}<br>"
+                "<b>Low</b>: $%{low}<br>"
+                "<b>Close</b>: $%{close}<br>"
+                "<extra></extra>"
+        ))
 
-            st.metric("Sentiment", sentiment, f"{polarity:.2f}")
+        # --- MA20 Overlay ---
+        fig.add_trace(go.Scatter(
+            x=data.index,
+            y=data["MA20"],
+            name="20D MA",
+            mode="lines",
+            line=dict(color='blue', width=1),
+            hovertemplate="<b>Date</b>: %{x|%Y-%m-%d}<br><b>20D MA</b>: $%{y:.2f}<extra></extra>"
+        ))
 
-            with st.expander("ℹ️ How this sentiment score is calculated"):
-                st.markdown(f"""
-                We analyze the most recent headlines for **{ticker}** using [**FinBERT**](https://huggingface.co/ProsusAI/finbert), a language model trained on financial documents.
+        # --- Volume Bars ---
+        fig.add_trace(go.Bar(
+            x=data.index,
+            y=data["Volume"],
+            name="Volume",
+            marker_color="lightgrey",
+            yaxis="y2",
+            opacity=0.3,
+            hovertemplate="<b>Date</b>: %{x|%Y-%m-%d}<br><b>Volume</b>: %{y:.0f}<extra></extra>"
+        ))
 
-                **Process:**
-                1. Fetch the last 5 headlines mentioning `{ticker}`
-                2. Each headline is scored as:
-                    - 🟢 Positive
-                    - ⚪ Neutral
-                    - 🔴 Negative
-                3. We compute:
-                ```python
-                Sentiment Score = Average(Positive) - Average(Negative)
-                ```
+        # --- RSI Line ---
+        fig.add_trace(go.Scatter(
+            x=data.index,
+            y=data["RSI"],
+            name="RSI (14)",
+            mode="lines",
+            line=dict(color="orange", width=1),
+            yaxis="y3",
+            hovertemplate="<b>Date</b>: %{x|%Y-%m-%d}<br><b>RSI</b>: %{y:.2f}<extra></extra>"
+        ))
 
-                - **Bullish** if score > +0.2
-                - **Bearish** if score < –0.2
-                - **Neutral** otherwise
-                """)
+        # --- Layout Config ---
+        fig.update_layout(
+            height=700,
+            template="plotly_white",
+            xaxis=dict(domain=[0, 1], title="Date"),
+            yaxis=dict(title="Price", side="right", position=0.05),
+            yaxis2=dict(title="Volume", overlaying="y", side="left", position=1, anchor="x", showgrid=False),
+            yaxis3=dict(title="RSI", domain=[0.0, 0.2], anchor="x", showgrid=True),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            margin=dict(t=40, b=20)
+        )
 
-                st.markdown("**🔍 Raw FinBERT Scores by Headline:**")
-                for row in finbert_results:
-                    st.markdown(f"""
-                    > *{row['headline']}*  
-                    🟢 Positive: `{row['positive']}`  
-                    ⚪ Neutral: `{row['neutral']}`  
-                    🔴 Negative: `{row['negative']}`  
-                    """)
-
-            st.subheader("🔍 AI Insight")
-            st.markdown(f"""
-            - **Ticker**: `{ticker}`
-            - **Sentiment**: `{sentiment}`
-            - **Price Change (30d)**: `{(data['Close'][-1] - data['Close'][0]) / data['Close'][0] * 100:.2f}%`
-            - **Volume Spike**: `{volume_today / avg_volume:.2f}x`
-
-            **Insight:** {ticker} is showing a **{sentiment.lower()}** trend.{" Volume spike indicates momentum." if volume_today > 1.5 * avg_volume else ""}
-            """)
+        st.plotly_chart(fig, use_container_width=True)
     except Exception as e:
         st.error(f"Error fetching data for {ticker}: {e}")
+
+
+st.subheader("🧠 Sentiment Analysis")
+
+# === Fetch Headlines ===
+news_api_url = f"https://newsapi.org/v2/everything?q=\"{ticker}\"&language=en&sortBy=publishedAt&pageSize=5&apiKey=11c0eca5f0284ac79d05f6a14749dc65"
+news_data = requests.get(news_api_url).json()
+articles = news_data.get("articles", [])
+headlines = [a["title"] for a in articles if "title" in a]
+
+if not headlines:
+    st.warning("No recent headlines found for sentiment analysis.")
+else:
+    finbert_results, polarity = get_finbert_sentiment(headlines)
+    finbert_results = sorted(finbert_results, key=lambda x: x["positive"], reverse=True)
+
+    if polarity > 0.2:
+        sentiment = "Bullish 📈"
+    elif polarity < -0.2:
+        sentiment = "Bearish 📉"
+    else:
+        sentiment = "Neutral 🤔"
+
+    st.metric("Sentiment", sentiment, f"{polarity:.2f}")
+
+    with st.expander("ℹ️ How this sentiment score is calculated"):
+        st.markdown(f"""
+        We analyze the most recent headlines for **{ticker}** using [**FinBERT**](https://huggingface.co/ProsusAI/finbert), a language model trained on financial documents.
+
+        **Process:**
+        1. Fetch the last 5 headlines mentioning `{ticker}`
+        2. Each headline is scored as:
+            - 🟢 Positive
+            - ⚪ Neutral
+            - 🔴 Negative
+        3. We compute:
+        ```python
+        Sentiment Score = Average(Positive) - Average(Negative)
+        ```
+
+        - **Bullish** if score > +0.2
+        - **Bearish** if score < –0.2
+        - **Neutral** otherwise
+        """)
+
+        st.markdown("**🔍 Raw FinBERT Scores by Headline:**")
+        for row in finbert_results:
+            st.markdown(f"""
+            > *{row['headline']}*  
+            🟢 Positive: `{row['positive']}`  
+            ⚪ Neutral: `{row['neutral']}`  
+            🔴 Negative: `{row['negative']}`  
+            """)
+
+    st.subheader("🔍 AI Insight")
+    st.markdown(f"""
+    - **Ticker**: `{ticker}`
+    - **Sentiment**: `{sentiment}`
+    - **Price Change (30d)**: `{(data['Close'][-1] - data['Close'][0]) / data['Close'][0] * 100:.2f}%`
+    - **Volume Spike**: `{volume_today / avg_volume:.2f}x`
+
+    **Insight:** {ticker} is showing a **{sentiment.lower()}** trend.{" Volume spike indicates momentum." if volume_today > 1.5 * avg_volume else ""}
+    """)
+
 
 # ===============================
 # Sector Screener – Mining Stocks
 # ===============================
-st.header("⛏️ Mining Sector Screener")
+    st.header("⛏️ Mining Sector Screener")
 
-senior_miners = {
-    "AEM": "Agnico Eagle Mines",
-    "NEM": "Newmont Corporation",
-    "GOLD": "Barrick Gold",
-    "FNV": "Franco-Nevada",
-    "WPM": "Wheaton Precious Metals"
-}
+    senior_miners = {
+        "AEM": "Agnico Eagle Mines",
+        "NEM": "Newmont Corporation",
+        "GOLD": "Barrick Gold",
+        "FNV": "Franco-Nevada",
+        "WPM": "Wheaton Precious Metals"
+    }
 
-junior_miners = {
-    "ROS.V": "Roscan Gold",
-    "MOZ.TO": "Marathon Gold",
-    "OSK.TO": "Osisko Mining",
-    "AR.TO": "Argonaut Gold",
-    "NXS.V": "Nexus Gold"
-}
+    junior_miners = {
+        "ROS.V": "Roscan Gold",
+        "MOZ.TO": "Marathon Gold",
+        "OSK.TO": "Osisko Mining",
+        "AR.TO": "Argonaut Gold",
+        "NXS.V": "Nexus Gold"
+    }
 
 def get_metrics_for_ticker(ticker, name=None):
     try:
