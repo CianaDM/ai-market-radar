@@ -194,7 +194,9 @@ if ticker:
 
 
 # 📊 Multi-Ticker Screener Add-On for Mining Stocks (Senior & Junior)
-# Includes debug and fallback handling for junior miners + improved NewsAPI queries
+# Includes debug and fallback handling for junior miners + improved NewsAPI queries + formatted headlines
+
+import pandas as pd
 
 st.header("⛏️ Mining Sector Screener")
 
@@ -238,7 +240,10 @@ def get_metrics_for_ticker(ticker, name=None):
         news_data = requests.get(news_api_url).json()
         articles = news_data.get("articles", [])
         headlines = [a["title"] for a in articles if "title" in a]
-        st.write("📰 Headlines:", headlines)
+
+        st.markdown("📰 **Headlines Preview:**")
+        for h in headlines:
+            st.markdown(f"- {h}")
 
         if not headlines:
             st.warning(f"⚠️ No headlines found for {ticker}")
@@ -261,6 +266,7 @@ def get_metrics_for_ticker(ticker, name=None):
     except Exception as e:
         st.error(f"❌ Error with {ticker}: {e}")
         return None
+
     
     # Display Screener Tabs
 tab1, tab2 = st.tabs(["Senior Miners", "Junior Miners"])
