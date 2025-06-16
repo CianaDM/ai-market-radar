@@ -64,6 +64,7 @@ if ticker:
         today = datetime.date.today()
         past = today - datetime.timedelta(days=30)
         data = yf.download(ticker, start=past, end=today)
+        data = data.dropna(subset=["Open", "High", "Low", "Close", "Volume"])
 
         stock = yf.Ticker(ticker)
         hist = stock.history(period="1d")
@@ -86,7 +87,7 @@ if ticker:
         data["RSI"] = 100 - (100 / (1 + rs))
         data["MA20"] = data["Close"].rolling(window=20).mean()
 
-        st.subheader(f"Candlestick Chart with RSI & Volume (30 Days)")
+        st.subheader(f"Candlestick Chart with RSI & Volume ({range_days} Days)")
 
         fig = go.Figure()
 
@@ -100,10 +101,8 @@ if ticker:
             name="Price",
             increasing_line_color='green',
             decreasing_line_color='red',
-            hovertext=data.index.strftime("%Y-%m-%d"),  # optional
             hoverinfo="x+y"
         ))
-
 
         # --- MA20 ---
         fig.add_trace(go.Scatter(
@@ -112,7 +111,7 @@ if ticker:
             name="20D MA",
             mode="lines",
             line=dict(color='blue', width=1),
-            hovertemplate="<b>Date</b>: %{x|%Y-%m-%d}<br><b>20D MA</b>: $%{y:.2f}<extra></extra>"
+            connectgaps=True
         ))
 
         # --- Volume ---
@@ -122,8 +121,7 @@ if ticker:
             name="Volume",
             marker_color="lightgrey",
             yaxis="y2",
-            opacity=0.3,
-            hovertemplate="<b>Date</b>: %{x|%Y-%m-%d}<br><b>Volume</b>: %{y:.0f}<extra></extra>"
+            opacity=0.3
         ))
 
         # --- RSI ---
@@ -134,22 +132,23 @@ if ticker:
             mode="lines",
             line=dict(color="orange", width=1),
             yaxis="y3",
-            hovertemplate="<b>Date</b>: %{x|%Y-%m-%d}<br><b>RSI</b>: %{y:.2f}<extra></extra>"
+            connectgaps=True
         ))
 
         # --- Layout ---
         fig.update_layout(
-            height=700,
+            height=720,
             template="plotly_white",
             xaxis=dict(domain=[0, 1], title="Date"),
-            yaxis=dict(title="Price", side="right", position=0.05),
+            yaxis=dict(title="Price", domain=[0.3, 1], position=0.05),
             yaxis2=dict(title="Volume", overlaying="y", side="left", position=1, anchor="x", showgrid=False),
-            yaxis3=dict(title="RSI", domain=[0.0, 0.2], anchor="x", showgrid=True),
+            yaxis3=dict(title="RSI", domain=[0, 0.2], anchor="x", showgrid=True),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
             margin=dict(t=40, b=20)
         )
 
         st.plotly_chart(fig, use_container_width=True)
+
 
     except Exception as e:
         st.error(f"Error fetching data for {ticker}: {e}")
