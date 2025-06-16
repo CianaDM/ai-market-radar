@@ -104,8 +104,8 @@ if ticker:
         fig = make_subplots(
             rows=3, cols=1,
             shared_xaxes=True,
-            vertical_spacing=0.02,
-            row_heights=[0.6, 0.25, 0.15],
+            vertical_spacing=0.005,
+            row_heights=[0.7, 0.2, 0.1],
             subplot_titles=("Price with 20D MA", "Volume", "RSI (14)")
         )
 
@@ -145,7 +145,7 @@ if ticker:
         ), row=3, col=1)
 
         fig.update_layout(
-            height=800,
+            height=900,
             template="plotly_white",
             showlegend=True,
             margin=dict(t=40, b=40)
