@@ -158,7 +158,7 @@ if ticker:
         st.plotly_chart(fig, use_container_width=True)
 
         # Move slider to render AFTER chart
-        range_days = slider_slot.slider("Select date range (days):", min_value=5, max_value=180, value=range_days, step=5)
+        range_days = slider_slot.slider("Select date range (days):", min_value=5, max_value=180, value=range_days, step=5):", min_value=5, max_value=180, value=range_days, step=5)
 
     except Exception as e:
         st.error(f"Error fetching data for {ticker}: {e}")
