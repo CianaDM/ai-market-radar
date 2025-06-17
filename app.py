@@ -60,11 +60,11 @@ if ticker:
 
         if response.status_code == 200:
             sentiment_data = response.json()
-            sentiment_section = sentiment_data.get("sentiment", {})
-            bullish = sentiment_section.get("bullishPercent")
-            bearish = sentiment_section.get("bearishPercent")
-
-            if bullish is not None and bearish is not None:
+            sentiment_section = sentiment_data.get("sentiment")
+            
+            if sentiment_section:
+                bullish = sentiment_section.get("bullishPercent")
+                bearish = sentiment_section.get("bearishPercent")
                 neutral = 100 - bullish - bearish
                 st.markdown(f"""
                 - 🟢 **Bullish**: {bullish:.0f}%
@@ -72,9 +72,11 @@ if ticker:
                 - ⚪ **Neutral**: {neutral:.0f}%
                 """)
             else:
-                st.caption("Sentiment data unavailable.")
+                st.caption("⚠️ No sentiment data found in API response.")
+                st.json(sentiment_data)  # For debugging: remove after confirmed
         else:
-            st.caption("Sentiment data unavailable.")
+            st.caption(f"❌ Sentiment API Error: {response.status_code}")
+
 
         # --- Expandable Headlines ---
         with st.expander("📢 Latest Headlines"):
