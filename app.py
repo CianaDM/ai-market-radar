@@ -80,9 +80,10 @@ if ticker:
         st.subheader("🧠 Sentiment Summary")
 
         sentiment_url = f"https://finnhub.io/api/v1/news-sentiment?symbol={tsx_ticker}&token={finnhub_key}"
+        response = requests.get(sentiment_url)
 
-        if sentiment_url.status_code == 200:
-            sentiment_data = sentiment_url.json()
+        if response.status_code == 200:
+            sentiment_data = response.json()
             bullish = sentiment_data.get("sentiment", {}).get("bullishPercent", 0)
             bearish = sentiment_data.get("sentiment", {}).get("bearishPercent", 0)
             neutral = 100 - bullish - bearish
