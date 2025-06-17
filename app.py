@@ -36,8 +36,8 @@ ticker = st.text_input("Enter a stock ticker (e.g., AAPL, TSLA, NVDA):", value="
 
 if ticker:
     try:
-        today = datetime.date.today()
-        past = today - datetime.timedelta(days=30)
+        today = datetime.today().date()
+        past = today - timedelta(days=30)
         tsx_ticker = f"TSX:{ticker}" if ":" not in ticker else ticker
 
         data = yf.download(ticker, start=past, end=today)
