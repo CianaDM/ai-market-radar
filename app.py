@@ -60,8 +60,9 @@ if ticker:
 
         if response.status_code == 200:
             sentiment_data = response.json()
-            bullish = sentiment_data.get("bullishPercent")
-            bearish = sentiment_data.get("bearishPercent")
+            sentiment_section = sentiment_data.get("sentiment", {})
+            bullish = sentiment_section.get("bullishPercent")
+            bearish = sentiment_section.get("bearishPercent")
 
             if bullish is not None and bearish is not None:
                 neutral = 100 - bullish - bearish
