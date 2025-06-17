@@ -4,6 +4,9 @@ import pandas as pd
 import requests
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
+import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+nltk.download("vader_lexicon")
 
 st.set_page_config(page_title="AI Market Radar", layout="centered")
 
@@ -53,47 +56,42 @@ if ticker:
         )
         st.plotly_chart(fig, use_container_width=True)
 
-        # --- Sentiment ---
-        st.subheader("🧠 Sentiment Summary")
-        sentiment_url = f"https://finnhub.io/api/v1/news-sentiment?symbol={symbol_for_api}&token={finnhub_key}"
-        response = requests.get(sentiment_url)
+        # === Sentiment Summary using VADER ===
+st.subheader("🧠 Sentiment Summary (via VADER)")
 
-        if response.status_code == 200:
-            sentiment_data = response.json()
-            sentiment_section = sentiment_data.get("sentiment")
-            
-            if sentiment_section:
-                bullish = sentiment_section.get("bullishPercent")
-                bearish = sentiment_section.get("bearishPercent")
-                neutral = 100 - bullish - bearish
-                st.markdown(f"""
-                - 🟢 **Bullish**: {bullish:.0f}%
-                - 🔴 **Bearish**: {bearish:.0f}%
-                - ⚪ **Neutral**: {neutral:.0f}%
-                """)
-            else:
-                st.caption("⚠️ No sentiment data found in API response.")
-                st.json(sentiment_data)  # For debugging: remove after confirmed
+try:
+    from nltk.sentiment.vader import SentimentIntensityAnalyzer
+    analyzer = SentimentIntensityAnalyzer()
+
+    if news_items:
+        sentiments = []
+        for article in news_items:
+            score = analyzer.polarity_scores(article['headline'])["compound"]
+            sentiments.append((score, article["headline"]))
+
+        avg_score = sum([s[0] for s in sentiments]) / len(sentiments)
+
+        if avg_score >= 0.25:
+            sentiment_label = "🟢 Bullish"
+        elif avg_score <= -0.25:
+            sentiment_label = "🔴 Bearish"
         else:
-            st.caption(f"❌ Sentiment API Error: {response.status_code}")
+            sentiment_label = "⚪ Neutral"
 
+        st.markdown(f"**Sentiment:** {sentiment_label}  \n"
+                    f"**Average Score:** {avg_score:+.2f}  \n"
+                    f"**Analyzed Headlines:** {len(sentiments)}")
 
-        # --- Expandable Headlines ---
-        with st.expander("📢 Latest Headlines"):
-            news_url = f"https://finnhub.io/api/v1/company-news?symbol={symbol_for_api}&from={past}&to={today}&token={finnhub_key}"
-            res = requests.get(news_url)
-            if res.status_code == 200:
-                news_items = res.json()[:5]
-                if news_items:
-                    for article in news_items:
-                        dt = datetime.fromtimestamp(article['datetime']).strftime('%Y-%m-%d')
-                        st.markdown(f"**{article['headline']}**")
-                        st.caption(f"{dt} — [Source]({article['url']})")
-                        st.markdown("---")
-                else:
-                    st.info("No recent headlines found.")
-            else:
-                st.warning(f"Finnhub API error: {res.status_code}")
+        # show top positive and negative headlines
+        top_pos = max(sentiments, key=lambda x: x[0])
+        top_neg = min(sentiments, key=lambda x: x[0])
 
-    except Exception as e:
-        st.error(f"Error fetching data for {ticker}: {e}")
+        with st.expander("💬 Strongest Headlines"):
+            st.markdown(f"**Most Positive:** _{top_pos[1]}_  (`{top_pos[0]:+.2f}`)")
+            st.markdown(f"**Most Negative:** _{top_neg[1]}_  (`{top_neg[0]:+.2f}`)")
+
+    else:
+        st.caption("Sentiment data unavailable.")
+
+except Exception as e:
+    st.error(f"VADER Sentiment error: {e}")
