@@ -57,12 +57,13 @@ if ticker:
         st.subheader("🧠 Sentiment Summary")
         sentiment_url = f"https://finnhub.io/api/v1/news-sentiment?symbol={symbol_for_api}&token={finnhub_key}"
         response = requests.get(sentiment_url)
+
         if response.status_code == 200:
             sentiment_data = response.json()
-            sentiment = sentiment_data.get("sentiment", {})
-            if sentiment:
-                bullish = sentiment.get("bullishPercent", 0)
-                bearish = sentiment.get("bearishPercent", 0)
+            bullish = sentiment_data.get("bullishPercent")
+            bearish = sentiment_data.get("bearishPercent")
+
+            if bullish is not None and bearish is not None:
                 neutral = 100 - bullish - bearish
                 st.markdown(f"""
                 - 🟢 **Bullish**: {bullish:.0f}%
