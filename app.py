@@ -39,6 +39,8 @@ if ticker:
         today = datetime.today().date()
         past = today - timedelta(days=30)
         tsx_ticker = f"TSX:{ticker}" if ":" not in ticker else ticker
+        finnhub_key = st.secrets["FINNHUB_API_KEY"] if "FINNHUB_API_KEY" in st.secrets else "d18t4qpr01qkcat4n8e0d18t4qpr01qkcat4n8eg"
+
 
         data = yf.download(ticker, start=past, end=today)
         if isinstance(data.columns, pd.MultiIndex):
@@ -77,10 +79,10 @@ if ticker:
         # === Finnhub News Sentiment ===
         st.subheader("🧠 Sentiment Summary")
 
-        sentiment_url = f"https://finnhub.io/api/v1/news-sentiment?symbol={tsx_ticker}&token={d18t4qpr01qkcat4n8e0d18t4qpr01qkcat4n8eg}"
-        sentiment_res = requests.get(sentiment_url)
-        if sentiment_res.status_code == 200:
-            sentiment_data = sentiment_res.json()
+        sentiment_url = f"https://finnhub.io/api/v1/news-sentiment?symbol={tsx_ticker}&token={finnhub_key}"
+
+        if sentiment_url.status_code == 200:
+            sentiment_data = sentiment_url.json()
             bullish = sentiment_data.get("sentiment", {}).get("bullishPercent", 0)
             bearish = sentiment_data.get("sentiment", {}).get("bearishPercent", 0)
             neutral = 100 - bullish - bearish
