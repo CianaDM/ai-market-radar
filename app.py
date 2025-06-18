@@ -9,6 +9,8 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 nltk.download("vader_lexicon")
 
 st.set_page_config(page_title="AI Market Radar", layout="centered")
+st.cache_data.clear()  # Clear Streamlit's cached charting data
+
 
 st.title("📈 AI Market Radar")
 st.caption("Get live price, volume, and AI-powered sentiment analysis.")
