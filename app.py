@@ -49,6 +49,7 @@ if ticker:
         data = data.dropna(subset=list(required_cols))
 
         # --- Candlestick Chart ---
+        st.markdown("### DEBUG: About to render chart block")
         st.subheader("📉 Candlestick Chart (30 Days)")
         st.success("✅ Rendering single candlestick chart")
 
