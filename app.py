@@ -49,10 +49,10 @@ if ticker:
         data = data.dropna(subset=list(required_cols))
 
         # --- Candlestick Chart ---
-        st.markdown("### DEBUG: About to render chart block")
         st.subheader("📉 Candlestick Chart (30 Days)")
         st.success("✅ Rendering single candlestick chart")
 
+        fig = None  # Clear any ghost Plotly figure state
         fig = go.Figure(data=[go.Candlestick(
             x=data.index,
             open=data["Open"],
@@ -73,6 +73,7 @@ if ticker:
         )
 
         st.plotly_chart(fig, use_container_width=True)
+
 
         # --- Sentiment Analysis (VADER over NewsAPI headlines) ---
         st.subheader("🧠 Sentiment Summary (via VADER)")
