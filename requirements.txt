@@ -5,3 +5,4 @@ plotly
 requests 
 torch 
 transformers
+nltk
