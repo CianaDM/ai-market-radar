@@ -48,31 +48,29 @@ if ticker:
 
         data = data.dropna(subset=list(required_cols))
 
-        st.subheader("📈 Candlestick Chart (30 Days)")
+        with st.container():
+            st.subheader("📈 Candlestick Chart (30 Days)")
+            fig = go.Figure()
+            fig.add_trace(go.Candlestick(
+                x=data.index,
+                open=data["Open"],
+                high=data["High"],
+                low=data["Low"],
+                close=data["Close"],
+                increasing_line_color="green",
+                decreasing_line_color="red",
+                name="Price"
+            ))
 
-        fig = go.Figure()
-        fig.add_trace(go.Candlestick(
-            x=data.index,
-            open=data["Open"],
-            high=data["High"],
-            low=data["Low"],
-            close=data["Close"],
-            increasing_line_color="green",
-            decreasing_line_color="red",
-            name="Price"
-        ))
-
-        fig.update_layout(
-            height=600,
-            template="plotly_white",
-            xaxis_title="Date",
-            yaxis_title="Price",
-            showlegend=False,
-            margin=dict(t=40, b=40)
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
+            fig.update_layout(
+                height=600,
+                template="plotly_white",
+                xaxis_title="Date",
+                yaxis_title="Price",
+                showlegend=False,
+                margin=dict(t=40, b=40)
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
         # --- Sentiment Analysis (VADER over NewsAPI headlines) ---
         st.subheader("🧠 Sentiment Summary (via VADER)")
