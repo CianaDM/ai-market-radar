@@ -27,11 +27,17 @@ if ticker:
         finnhub_key = st.secrets["FINNHUB_API_KEY"] if "FINNHUB_API_KEY" in st.secrets else "your_fallback_key"
         newsapi_key = st.secrets["NEWS_API_KEY"] if "NEWS_API_KEY" in st.secrets else "your_newsapi_key"
 
-        # --- Price Data ---
-        data = yf.download(ticker, start=past, end=today)
-        if isinstance(data.columns, pd.MultiIndex):
-            data.columns = [col[0] for col in data.columns]
-        data.columns = [col.capitalize() for col in data.columns]
+        # === Price Data Helper ===
+        @st.cache_data
+        def get_price_data(ticker, start, end):
+            data = yf.download(ticker, start=start, end=end)
+            if isinstance(data.columns, pd.MultiIndex):
+                data.columns = [col[0] for col in data.columns]
+            data.columns = [col.capitalize() for col in data.columns]
+            return data
+
+        # === Price Data Section ===
+        data = get_price_data(ticker, past, today)
 
         required_cols = {"Open", "High", "Low", "Close"}
         if not required_cols.issubset(set(data.columns)):
@@ -41,17 +47,30 @@ if ticker:
         data = data.dropna(subset=list(required_cols))
 
         st.subheader("📈 Candlestick Chart (30 Days)")
-        fig = go.Figure(data=[go.Candlestick(
+
+        fig = go.Figure()
+        fig.add_trace(go.Candlestick(
             x=data.index,
             open=data["Open"],
             high=data["High"],
             low=data["Low"],
             close=data["Close"],
             increasing_line_color="green",
-            decreasing_line_color="red"
-        )])
-        fig.update_layout(height=700, template="plotly_white", showlegend=False, margin=dict(t=40, b=40))
+            decreasing_line_color="red",
+            name="Price"
+        ))
+
+        fig.update_layout(
+            height=600,
+            template="plotly_white",
+            xaxis_title="Date",
+            yaxis_title="Price",
+            showlegend=False,
+            margin=dict(t=40, b=40)
+        )
+
         st.plotly_chart(fig, use_container_width=True)
+
 
         # --- Sentiment Analysis (VADER over NewsAPI headlines) ---
         st.subheader("🧠 Sentiment Summary (via VADER)")
