@@ -70,6 +70,7 @@ if ticker:
                 showlegend=False,
                 margin=dict(t=40, b=40)
             )
+            st.write("✅ Rendering single candlestick chart")
             st.plotly_chart(fig, use_container_width=True)
 
         # --- Sentiment Analysis (VADER over NewsAPI headlines) ---
